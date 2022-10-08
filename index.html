@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="">
+    <meta name="description" content="Soil Type Classifier Using Convolutional Neural Network">
+    <title> Face Feature Classification </title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
+
+        * {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        main {
+            width: min(400px, 90vw);
+            margin: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding: 1rem;
+        }
+
+        #soil_img {
+            display: none;
+            margin: 1rem 0;
+            width: 100%;
+        }
+
+        #img_placeholder {
+            text-align: center;
+            padding: 6rem 0;
+            background-color: hsla(0, 0%, 0%, .1);
+            cursor: pointer;
+        }
+
+        button {
+            padding: 1rem;
+
+            
+        
+        }
+
+        body{
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(120deg,#032942, hsla(0, 0%, 0%, .1));
+            height: 100vh;
+            overflow: hidden;
+         }
+         
+            nav{
+            display: flex;
+            height: 80px;
+            width: 100%;
+            background: #1b1b1b;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 50px 0 100px;
+            flex-wrap: wrap;
+            }
+            nav .logo{
+            color: #fff;
+            font-size: 35px;
+            font-weight: 600;
+            }
+            nav ul{
+            display: flex;
+            flex-wrap: wrap;
+            list-style: none;
+            }
+            nav ul li{
+            margin: 0 5px;
+            }
+            nav ul li a{
+            color: #f2f2f2;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 500;
+            padding: 8px 15px;
+            border-radius: 5px;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            }
+            nav ul li a.active,
+            nav ul li a:hover{
+            color: #111;
+            background: #fff;
+            }
+            nav .menu-btn i{
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            display: none;
+            }
+            input[type="checkbox"]{
+            display: none;
+            }
+            @media (max-width: 1000px){
+            nav{
+                padding: 0 40px 0 50px;
+            }
+            }
+            @media (max-width: 920px) {
+            nav .menu-btn i{
+                display: block;
+            }
+            #click:checked ~ .menu-btn i:before{
+                content: "\f00d";
+            }
+            nav ul{
+                position: fixed;
+                top: 80px;
+                left: -100%;
+                background: #111;
+                height: 100vh;
+                width: 100%;
+                text-align: center;
+                display: block;
+                transition: all 0.3s ease;
+            }
+            #click:checked ~ ul{
+                left: 0;
+            }
+            nav ul li{
+                width: 100%;
+                margin: 40px 0;
+            }
+            nav ul li a{
+                width: 100%;
+                margin-left: -100%;
+                display: block;
+                font-size: 20px;
+                transition: 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            }
+            #click:checked ~ ul li a{
+                margin-left: 0px;
+            }
+            nav ul li a.active,
+            nav ul li a:hover{
+                background: none;
+                color: cyan;
+            }
+            }
+            .content{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: -1;
+            width: 100%;
+            padding: 0 30px;
+            color: #1b1b1b;
+            }
+            .content div{
+            font-size: 40px;
+            font-weight: 700;
+            }
+
+    </style>
+</head>
+
+<body>
+    <nav>
+        <div class="logo">IFIND</div>
+        <input type="checkbox" id="click">
+        <label for="click" class="menu-btn">
+          <i class="fas fa-bars"></i>
+        </label>
+        <ul>
+          <li><a class="" href=""></a></li>
+          <li><a href="/index">Project</a></li>
+          <li><a href="/home">Home</a></li>
+          <li><a href="/developer">Developer</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      </nav>
+      <div class="content">
+        <div></div>
+        <div></div>
+      </div>
+
+
+    <main>
+        <input type="file" id="fileInput" accept="image/jpg" onchange="handleChange(event)" hidden />
+
+        <img src="" alt="soil_image" id="soil_img" hidden>
+
+        <div id="img_placeholder" title="select image">
+            Tap to choose an image
+        </div>
+
+        <button onclick="classify()"> Classify </button>
+
+        <section id="result"></section>
+    </main>
+
+    <script>
+        const acceptedFileType = 'image/jpeg';
+        const reader = new FileReader();
+        const displayImage = document.getElementById('soil_img');
+        const fileInput = document.getElementById('fileInput');
+        const imgPlaceholder = document.getElementById('img_placeholder');
+        let base64Image = null;
+        let imageHasBeenChanged = false;
+
+        imgPlaceholder.onclick = () => fileInput.click();
+
+        function showError() {
+            alert('Invalid file type');
+        }
+
+        function handleChange(e) {
+            // return if no file selected
+            if (e.target.files.length === 0) return;
+
+            const file = e.target.files[0];
+            if (file.type !== acceptedFileType) {
+                showError();
+                return;
+            }
+
+            reader.readAsDataURL(file);
+            reader.onloadend = () => {
+                base64Image = reader.result;
+                displayImage.src = base64Image;
+                displayImage.style.display = 'block';
+                imgPlaceholder.innerText = 'Select another image';
+                imgPlaceholder.style.padding = '1rem 0';
+                imageHasBeenChanged = true;
+            };
+        }
+
+        async function classify() {
+            if (base64Image === null && imageHasBeenChanged === false) {
+                alert('Please select an image first.');
+                return;
+            }
+            // prevent fetching the s-ame image twice
+            if (base64Image !== null && imageHasBeenChanged === false) {
+                alert('The selected image is already classified. Please select different one.');
+                return;
+            }
+
+            const resultContainer = document.getElementById('result');
+            resultContainer.innerHTML = 'Processing...';
+
+            const res = await fetch('/', {
+                method: 'POST',
+                body: JSON.stringify({ base64Image }),
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const data = await res.json();
+
+            imageHasBeenChanged = false;
+
+            console.log(data);
+
+            resultContainer.innerHTML = '';
+            resultContainer.innerHTML = `
+                <h5> ${data.eyes.label} eyes </h4>
+                <h5> ${data.eyes.accuracy_score} </h4> <br/>
+                <h5> ${data.nose.label} nose </h4>
+                <h5> ${data.nose.accuracy_score} </h4> <br/>
+                <h5> ${data.skin.label} skin </h4>
+                <h5> ${data.skin.accuracy_score} </h4> <br/>
+            `;
+        }
+    </script>
+</body>
+
+</html>
